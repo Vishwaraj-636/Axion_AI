@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hook/use.auth';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e) => {
+  const { handleLogin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login Data:', { email, password });
-    // In a real application, you would send this data to your backend for authentication.
+    const payLoad = { email, password };
+    await handleLogin(payLoad);
+    navigate("/")
   };
 
   return (
