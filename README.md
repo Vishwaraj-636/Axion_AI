@@ -4,7 +4,7 @@ Axion AI is a full-stack authentication and chat workspace built with an Express
 
 ## What Is In This Repo
 
-The repository is split into two applications:
+The repository is split into two main applications:
 
 - `backend/` contains the Express API, MongoDB connection, auth routes, validators, mail service, and JWT-based session handling.
 - `frontend/` contains the React application, Redux store, auth hooks, auth API client, and the login/register screens.
@@ -16,6 +16,7 @@ The repository is split into two applications:
 - Email verification through a tokenized verification link.
 - Login with password validation and verified-email checks.
 - Cookie-based JWT session creation on successful login.
+- A protected dashboard entry point that initializes a Socket.io connection.
 - `get-me` endpoint for restoring the current user from the session cookie.
 - React auth forms with controlled inputs and route-based navigation between login and register pages.
 - Redux-backed client state for `user`, `loading`, and `error`.
@@ -46,6 +47,7 @@ frontend/
   src/
     main.jsx
     app/
+      app.routes.jsx
     features/
       auth/
       chat/
@@ -160,6 +162,15 @@ Routing is defined in [`frontend/src/app/app.routes.jsx`](frontend/src/app/app.r
 - `/` renders the dashboard screen.
 
 The app wrapper in [`frontend/src/app/App.jsx`](frontend/src/app/App.jsx) also triggers `handleGetMe()` on load to restore the current user from the session cookie.
+
+### 11. Implement the Dashboard and Socket.io Connection
+
+- The `frontend/src/features/chat/pages/DashBoard.jsx` component serves as the protected entry point after successful login.
+- It uses the `useChat` hook (defined in `frontend/src/features/chat/hook/useChat.js`) to manage chat-related functionalities.
+- Upon mounting, it initializes a Socket.io connection to the backend, preparing for real-time communication.
+- The dashboard currently displays a placeholder "Hello world".
+- The `Login.jsx` component now also includes a check to redirect authenticated users directly to the dashboard (`/`) if they are already logged in.
+
 
 ## Local Setup
 
