@@ -36,10 +36,15 @@ backend/
   package.json
     config/database.js
     controllers/auth.controller.js
+    controllers/chat.controller.js
     middleware/auth.middleware.js
     model/
+      chat.model.js
+      message.model.js
     routes/auth.router.js
+    routes/chat.routes.js
     services/
+      ai.service.js
     validators/auth.validator.js
 frontend/
   package.json
@@ -115,6 +120,15 @@ You need the following environment variables for email verification to work:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REFRESH_TOKEN`
+
+### 6.5. Implement AI Services
+
+The AI service in `backend/src/services/ai.service.js` integrates with Google Gemini for generating chat responses and Mistral AI for creating concise chat titles.
+
+You need the following environment variables for AI services to work:
+
+- `GEMINI_API_KEY`
+- `MISTRAL_API_KEY`
 
 ### 7. Build the frontend auth flow
 
@@ -205,6 +219,9 @@ GOOGLE_USER=your_gmail_address
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 GOOGLE_REFRESH_TOKEN=your_google_oauth_refresh_token
+
+GEMINI_API_KEY=your_gemini_api_key
+MISTRAL_API_KEY=your_mistral_api_key
 ```
 
 Notes:
