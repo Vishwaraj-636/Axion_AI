@@ -50,4 +50,51 @@ export async function getChats(req, res) {
   const user = req.user
 
   const chats = await chatModel.find({user:user.id})
+
+  res.status(200).json({
+    message:" Chats fetched successfully",
+    chats
+  })
+}
+
+export async function getMessages(req,res) {
+  const {chatId} = req.params
+  const chat = await chatModel.find({
+    _id:chatId,
+    user:req.user.id
+  })
+
+  if(!chat){
+    return res.status(404).json({
+      message:"Chat not found",
+    })
+  }
+  const messages = await messageModel.find({chat:chatId})
+
+  res.status(200).json({
+    message:"Messages fetched successfully",
+    messages
+  })
+}
+
+export async function deleteChat(req,res) {
+  const {chatId} = req.params
+  const chat = await chatModel.findOneAndDelete({
+    _id:chatId,
+    user:req.user.id
+  })
+
+  await messageModel.deleteMany({chat:chatId})
+
+  if(!chat){
+    return res.status(404).json({
+      message:"Chat not found",
+    })
+  }
+
+  res.status(200).json({
+    message:"Chat deleted successfully",
+  })
+
+
 }

@@ -11,3 +11,13 @@ export const sendMessage = async (message, chatId) => {
   const { data } = await chatApi.post("/message", { message, chat: chatId });
   return data;
 };
+
+export const getChats = async () => {
+  const { data } = await chatApi.get("/chats");
+  return data;
+};
+
+export const getMessages = async (chatId) => {
+  const { data } = await chatApi.get(`/chats/${chatId}/messages`);
+  return data;
+};
