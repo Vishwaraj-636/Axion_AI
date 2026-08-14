@@ -1,23 +1,27 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api/chat"; // Or from env vars
 
-const chatApi = axios.create({
-  baseURL: API_URL,
+const api = axios.create({
+  baseURL: "http://localhost:3000",
   withCredentials: true,
 });
 
-export const sendMessage = async (message, chatId) => {
-  const { data } = await chatApi.post("/message", { message, chat: chatId });
-  return data;
+export const sendMessage = async ({message, chatId}) => {
+  const response = await api.post("/api/chats/message", { message,chatId });
+  return response.data;
 };
 
 export const getChats = async () => {
-  const { data } = await chatApi.get("/chats");
-  return data;
+  const response = await api.get("/api/chats");
+  return response.data;
 };
 
 export const getMessages = async (chatId) => {
-  const { data } = await chatApi.get(`/chats/${chatId}/messages`);
-  return data;
+  const response = await api.get(`/api/chats/${chatId}/messages`);
+  return response.data;
 };
+
+export const deleteChat = async (chatId) => {
+  const response = await api.delete(`/api/chats/delete/${chatId}`);
+  return response.data;
+}
