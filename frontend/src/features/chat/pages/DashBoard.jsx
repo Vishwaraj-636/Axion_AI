@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSelector } from "react-redux"
 import { useChat } from '../hook/useChat'
+import ReactMarkdown from 'react-markdown'
 
 const DashBoard = () => {
   const chat = useChat();
@@ -12,6 +13,7 @@ const DashBoard = () => {
 
   useEffect(() => {
     chat.initializeSocketConnection()
+    chat.handleGetChats()
   }, [])
 
   const handleSubmit = (event) => {
@@ -23,6 +25,9 @@ const DashBoard = () => {
     chat.handleSendMessage(trimmedMessage, currentChatId);
     setChatInput('');
   }
+  const openChat = (chatId) => {
+    chat.handleOpenChat(chatId);
+  }
 
   return (
     <main className='min-h-screen w-full bg-[#07090f] p-3 text-white md:p-5'>
@@ -32,13 +37,14 @@ const DashBoard = () => {
             <h1 className='mb-5 text-3xl font-semibold tracking-tight'>Axion</h1>
 
             <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, index) => (
+              {Object.values(chats).map((chat, index) => (
                 <button
+                  onClick={()=>{openChat(chat.id)}}
                   key={index}
                   type='button'
-                  className='w-full rounded-2xl border-2 border-neutral-200/80 bg-neutral-900/80 px-5 py-3 text-xl text-neutral-100 transition hover:-translate-y-0.5 hover:bg-neutral-800 font-mono'
+                  className='w-full cursor-pointer rounded-2xl border-2 border-neutral-200/80 bg-neutral-900/80 px-5 py-3 text-xl text-neutral-100 transition hover:-translate-y-0.5 hover:bg-neutral-800 font-mono'
                 >
-                  Chat title
+                  {chat.title}
                 </button>
               ))}
             </div>
@@ -57,9 +63,15 @@ const DashBoard = () => {
                     : "rounded-tl-none bg-[#0f1626] text-white/90"
                     }`}
                 >
-                  <p className="whitespace-pre-wrap leading-relaxed">
-                    {msg.content}
-                  </p>
+                  {msg.role === "ai" ? (
+                    <div className="leading-relaxed">
+                      <ReactMarkdown>{String(msg.content || "")}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap leading-relaxed">
+                      {msg.content}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
