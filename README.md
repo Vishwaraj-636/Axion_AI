@@ -1,12 +1,14 @@
 # Axion AI
 
 Axion AI is a full-stack authentication and chat workspace built with an Express + MongoDB backend and a React + Vite frontend. The current implementation focuses on user registration, email verification, login, session retrieval, and a protected dashboard entry point that is prepared for chat features.
+Axion AI is a full-stack, AI-powered chat application built with an Express + MongoDB backend and a React + Vite frontend. It features a complete authentication system and a real-time, responsive chat workspace.
 
 ## What Is In This Repo
 
 The repository is split into two main applications:
 
 - `backend/` contains the Express API, MongoDB connection, auth routes, validators, mail service, and JWT-based session handling.
+- `backend/` contains the Express API, MongoDB connection, auth routes, real-time chat logic with Socket.IO, and AI service integrations using LangGraph.
 - `frontend/` contains the React application, Redux store, auth hooks, auth API client, and the login/register screens.
 
 ## Current Feature Set
@@ -17,6 +19,12 @@ The repository is split into two main applications:
 - Login with password validation and verified-email checks.
 - Cookie-based JWT session creation on successful login.
 - A protected dashboard entry point that initializes a Socket.io connection.
+- Real-time, streaming AI responses via WebSockets (Socket.IO).
+- Persistent chat history saved and retrieved from the database.
+- AI-powered responses from Google Gemini, orchestrated with LangGraph.
+- Automatic, concise chat title generation from Mistral AI.
+- Rich Markdown rendering for AI messages, including code blocks.
+- Responsive chat UI with a collapsible sidebar for conversation history.
 - `get-me` endpoint for restoring the current user from the session cookie.
 - React auth forms with controlled inputs and route-based navigation between login and register pages.
 - Redux-backed client state for `user`, `loading`, and `error`.
@@ -26,6 +34,8 @@ The repository is split into two main applications:
 
 - Backend: Express, MongoDB, Mongoose, JWT, bcrypt, Nodemailer, CORS, Morgan, express-validator.
 - Frontend: React 19, Vite, React Router, Redux Toolkit, React Redux, Axios, Tailwind CSS.
+- Backend: Express, MongoDB, Mongoose, JWT, bcrypt, Nodemailer, CORS, Morgan, express-validator, **Socket.io, LangChain.js, LangGraph**.
+- Frontend: React 19, Vite, React Router, Redux Toolkit, React Redux, Axios, Tailwind CSS, **Socket.IO Client, react-markdown**.
 - Auth model: email verification + JWT session cookie.
 
 ## Project Structure
@@ -56,6 +66,36 @@ frontend/
     features/
       auth/
       chat/
+├── backend/
+│   ├── config/
+│   ├── controllers/
+│   │   ├── auth.controller.js
+│   │   └── chat.controller.js
+│   ├── middleware/
+│   ├── models/
+│   │   ├── chat.model.js
+│   │   ├── message.model.js
+│   │   └── user.model.js
+│   ├── routes/
+│   │   ├── auth.router.js
+│   │   └── chat.routes.js
+│   ├── services/
+│   │   ├── ai.service.js
+│   │   └── mail.service.js
+│   ├── validators/
+│   └── server.js
+└── frontend/
+    ├── public/
+    ├── src/
+    │   ├── app/
+    │   ├── components/
+    │   ├── features/
+    │   │   ├── auth/
+    │   │   └── chat/
+    │   ├── hooks/
+    │   ├── services/
+    │   └── main.jsx
+    └── vite.config.js
 ```
 
 ## Step-By-Step Implementation So Far
@@ -184,6 +224,62 @@ The app wrapper in [`frontend/src/app/App.jsx`](frontend/src/app/App.jsx) also t
 - Upon mounting, it initializes a Socket.io connection to the backend, preparing for real-time communication.
 - The dashboard currently displays a placeholder "Hello world".
 - The `Login.jsx` component now also includes a check to redirect authenticated users directly to the dashboard (`/`) if they are already logged in.
+
+
+### 12. Define Chat and Message Database Models
+
+- In `backend/src/models/`, `chat.model.js` and `message.model.js` were created to persist conversation data.
+- The `Chat` model links to a `User` via an `owner` field and stores a `title`.
+- The `Message` model links to a `Chat` and stores the `content` and `role` (`user` or `assistant`), allowing for retrieval of entire conversation threads.
+
+### 13. Add Chat API Routes and Controller Logic
+
+- The `backend/src/routes/chat.routes.js` file exposes RESTful endpoints for managing chats.
+- `GET /api/chats`: Fetches all chat histories for the authenticated user to populate the sidebar.
+- `GET /api/chats/:chatId/messages`: Fetches all messages for a specific chat, displayed when a user selects a conversation.
+- The controller logic is handled in `backend/src/controllers/chat.controller.js`.
+
+### 14. Implement Real-time Chat with Socket.io
+
+- The main server file (`backend/server.js`) was updated to initialize a Socket.IO server.
+- A connection handler listens for new clients and handles a `message` event.
+- When a `message` is received, it's processed by the AI service, and the response is streamed back to the client over the same socket connection.
+
+### 15. Build the Frontend Chat UI
+
+- The dashboard in `frontend/src/features/chat/pages/DashBoard.jsx` was built into a full chat interface.
+- It is composed of several components: `ConversationHistory.jsx` (sidebar), `MessageList.jsx` (main message view), and `MessageInput.jsx` (input form).
+- The layout is responsive and styled with Tailwind CSS.
+
+### 16. Implement the `useChat` Custom Hook
+
+- The `frontend/src/features/chat/hook/useChat.js` custom hook centralizes all chat-related logic and state management.
+- It is responsible for:
+    - Initializing and managing the Socket.IO client connection (`initializeSocketConnection`).
+    - Fetching the user's chat history from the backend (`handleGetChats`).
+    - Opening a specific chat and loading its messages (`handleOpenChat`).
+    - Sending new messages to the backend via Socket.IO (`handleSendMessage`).
+- It dispatches actions to the Redux store to update the chat state (e.g., adding new messages, setting the current chat).
+
+### 17. Frontend Chat State Management with Redux
+
+- A dedicated Redux slice (e.g., `frontend/src/features/chat/chat.slice.js`) manages the application's chat state.
+- It stores an array of `chats` (conversation history) and the `currentChatId` to track the active conversation.
+- Messages for the `currentChatId` are stored within the `chats` object, allowing for a complete view of the current conversation.
+- Redux actions are used to add new messages, update chat titles, and switch between conversations, ensuring a predictable state flow.
+
+### 18. Real-time Message Display and Markdown Rendering
+
+- The `DashBoard.jsx` component dynamically renders messages from the Redux store.
+- User messages are displayed as plain text, while AI responses are processed and rendered using `react-markdown`.
+- Custom components are provided to `ReactMarkdown` to ensure beautiful and consistent styling for various markdown elements, including:
+    - Headings (`h1`, `h2`, `h3`)
+    - Lists (`ul`, `ol`, `li`)
+    - Code blocks (`code`) with syntax highlighting (if configured) and a copy button.
+    - Bold text (`strong`)
+    - Links (`a`)
+    - Blockquotes (`blockquote`)
+- This ensures that AI-generated content, which often includes markdown, is presented clearly and aesthetically.
 
 
 ## Local Setup
@@ -337,11 +433,27 @@ Marks the account as verified if the token is valid.
 
 Returns the current user from the session cookie.
 
+### `GET /api/chats`
+
+Returns an array of all chats for the authenticated user. Requires a valid session cookie.
+
+### `GET /api/chats/:chatId/messages`
+
+Returns an array of all messages for the specified chat ID. Requires a valid session cookie.
+
+### `POST /api/chats/message`
+
+Sends a new message to the AI. If `chatId` is not provided, a new chat is created.
+
+### `DELETE /api/chats/delete/:chatId`
+
+Deletes a specific chat and all its associated messages. Requires a valid session cookie.
+
 ## Notes For Development
 
 - The app currently assumes cookie-based authentication and cross-origin requests, so the backend CORS config must stay aligned with the frontend origin.
 - The frontend login and register pages navigate immediately after submit; if you want stricter success handling, check the API response before redirecting.
-- The dashboard route is already mounted, but the chat experience itself still appears to be in progress.
+- The chat experience relies on a Socket.IO connection, which is established when the dashboard loads.
 
 ## Next Useful Improvements
 
@@ -349,4 +461,5 @@ Returns the current user from the session cookie.
 - Make the backend and frontend base URLs configurable through environment variables.
 - Add loading and error messages directly in the auth screens.
 - Protect the dashboard route with an authenticated route guard.
-- Document the chat features once the dashboard is implemented.
+- Allow users to rename existing chats.
+- Refactor UI components for better reusability and separation of concerns.
