@@ -16,7 +16,7 @@ export const useChat = () => {
       const { chat, aiMessage } = data;
       const resolvedChatId = chat?._id || chatId;
 
-      if (chat) {
+      if (!chatId) {
         dispatch(createNewChat({
           chatId: chat._id,
           title: chat.title,
@@ -24,13 +24,15 @@ export const useChat = () => {
       }
 
       dispatch(addNewMessage({
-        chatId: resolvedChatId,
+        // chatId: resolvedChatId,
+        chatId: chatId || chat._id,
         content: message,
         role: "user",
       }));
-
+      
       dispatch(addNewMessage({
-        chatId: resolvedChatId,
+        chatId: chatId || chat._id,
+        // chatId: resolvedChatId,
         content: aiMessage.content,
         role: aiMessage.role,
       }));
