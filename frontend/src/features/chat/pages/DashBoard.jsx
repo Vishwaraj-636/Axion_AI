@@ -5,7 +5,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { RiArrowUpLine, RiMenu4Line } from "@remixicon/react";
+import { RiArrowUpLine, RiMenu4Line, RiDeleteBinLine, RiLogoutBoxRLine, RiUserLine } from "@remixicon/react";
+import { useAuth } from "../../auth/hook/use.auth";
 
 const DashBoard = () => {
   const chat = useChat();
@@ -14,7 +15,20 @@ const DashBoard = () => {
 
   const chats = useSelector((state) => state.chat.chats);
   const currentChatId = useSelector((state) => state.chat.currentChatId);
+  const isLoading = useSelector((state) => state.chat.isLoading);
   const { user } = useSelector((state) => state.auth);
+  const { handleLogout } = useAuth();
+
+  const suggestions = [
+    "Explain Quantum Computing in simple terms",
+    "Write a haiku about artificial intelligence",
+    "How do I center a div using Tailwind CSS?",
+    "Give me a recipe for chocolate chip cookies"
+  ];
+
+  const handleSuggestionClick = (suggestion) => {
+    chat.handleSendMessage(suggestion, currentChatId);
+  }
 
   useEffect(() => {
     chat.initializeSocketConnection()
@@ -53,17 +67,45 @@ const DashBoard = () => {
             </div>
 
             {/* Chat list */}
-            <div className={`w-full space-y-1 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              {Object.values(chats).map((chat, index) => (
-                <button
-                  onClick={() => { openChat(chat.id) }}
-                  key={index}
-                  type='button'
-                  className='w-full truncate text-left cursor-pointer rounded-lg px-3 py-2 text-sm text-neutral-400 transition hover:bg-white/5 hover:text-white font-mono'
-                >
-                  {chat.title}
-                </button>
+            <div className={`w-full flex-1 overflow-y-auto space-y-1 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              {Object.values(chats).map((c, index) => (
+                <div key={index} className="flex items-center justify-between group rounded-lg transition hover:bg-white/5 pr-2">
+                  <button
+                    onClick={() => { openChat(c.id) }}
+                    type='button'
+                    className='flex-1 truncate text-left cursor-pointer px-3 py-2 text-sm text-neutral-400 group-hover:text-white font-mono'
+                  >
+                    {c.title}
+                  </button>
+                  <button 
+                    onClick={() => chat.handleDeleteChat(c.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-neutral-500 hover:text-red-400 transition"
+                  >
+                    <RiDeleteBinLine size={16} />
+                  </button>
+                </div>
               ))}
+            </div>
+
+            {/* User Profile & Logout */}
+            <div className={`mt-auto pt-4 border-t border-white/10 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-white/5">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                    <RiUserLine size={16} className="text-blue-400" />
+                  </div>
+                  <span className="text-sm font-medium truncate text-neutral-200">
+                    {user?.username || 'User'}
+                  </span>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+                  title="Logout"
+                >
+                  <RiLogoutBoxRLine size={18} />
+                </button>
+              </div>
             </div>
           </aside>
           <section className="mx-auto flex h-full min-w-0 w-full max-w-4xl flex-col gap-4 overflow-hidden px-4 py-10">
@@ -148,6 +190,34 @@ const DashBoard = () => {
                   )}
                 </div>
               ))}
+              
+              {isLoading && (
+                <div className="rounded-2xl px-4 py-3 text-sm max-w-[95%] rounded-tl-none bg-[#000000] text-white/90 flex items-center gap-1.5 w-fit">
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              )}
+
+              {(!chats[currentChatId] || chats[currentChatId].messages.length === 0) && !isLoading && (
+                <div className="h-full flex flex-col items-center justify-center pt-20">
+                  <div className="h-16 w-16 mb-6 rounded-2xl bg-white/5 flex items-center justify-center">
+                    <span className="text-3xl">✨</span>
+                  </div>
+                  <h2 className="text-2xl font-semibold mb-8 text-white">How can I help you today?</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl px-4">
+                    {suggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-left transition text-sm text-neutral-300 hover:text-white"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <footer className="shrink-0 rounded-3xl w-full bg-[#1E1F20] p-2 md:p-2 ">

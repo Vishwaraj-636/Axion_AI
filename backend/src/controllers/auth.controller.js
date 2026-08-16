@@ -156,3 +156,11 @@ export async function getMe(req,res) {
     user
   })
 }
+
+export async function logout(req,res) {
+  res.clearCookie("token");
+  res.status(200).json({
+    message: "Logout successful",
+    success: true
+  })
+}
