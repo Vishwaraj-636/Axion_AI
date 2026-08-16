@@ -29,7 +29,7 @@ export const useChat = () => {
         content: message,
         role: "user",
       }));
-      
+
       dispatch(addNewMessage({
         chatId: chatId || chat._id,
         // chatId: resolvedChatId,
@@ -65,30 +65,49 @@ export const useChat = () => {
 
   }
 
-  async function handleOpenChat(chatId) {
-    if (!chatId) return;
+  async function handleOpenChat(chatId, chats) {
 
-    dispatch(setIsLoading(true));
+    if (chats[chatId]?.messages.length === 0) {
 
-    try {
-      const data = await getMessages(chatId);
-      const { messages } = data;
-      const formattedMessages = messages.map(msg => ({
+      if (!chatId) return;
+
+      dispatch(setIsLoading(true));
+
+      try {
+        const data = await getMessages(chatId);
+        const { messages } = data;
+        const formattedMessages = messages.map(msg => ({
+          content: msg.content,
+          role: msg.role
+        }));
+
+        dispatch(addMessages({
+          chatId,
+          messages: formattedMessages
+        }));
+        dispatch(setCurrentChatId(chatId));
+        dispatch(setError(null));
+      }
+      catch (error) {
+        dispatch(setError(error?.response?.data?.message || "Failed to open chat"));
+      }
+      finally {
+        dispatch(setIsLoading(false));
+      }
+      /* const data = await getMessages(chatId)
+      const { messages } = data
+
+      const formattedMessages = messages.map(msg=>({
         content: msg.content,
         role: msg.role
-      }));
+      }))
 
       dispatch(addMessages({
         chatId,
         messages: formattedMessages
-      }));
-      dispatch(setCurrentChatId(chatId));
-      dispatch(setError(null));
-    } catch (error) {
-      dispatch(setError(error?.response?.data?.message || "Failed to open chat"));
-    } finally {
-      dispatch(setIsLoading(false));
+      })) */
     }
+    dispatch(setCurrentChatId(chatId));
   }
   return {
     initializeSocketConnection,

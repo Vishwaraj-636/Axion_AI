@@ -169,6 +169,7 @@ You need the following environment variables for AI services to work:
 
 - `GEMINI_API_KEY`
 - `MISTRAL_API_KEY`
+- `TAVILY_API_KEY`
 
 ### 7. Build the frontend auth flow
 
@@ -318,6 +319,7 @@ GOOGLE_REFRESH_TOKEN=your_google_oauth_refresh_token
 
 GEMINI_API_KEY=your_gemini_api_key
 MISTRAL_API_KEY=your_mistral_api_key
+TAVILY_API_KEY=your_tavily_api_key
 ```
 
 Notes:

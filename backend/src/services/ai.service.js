@@ -1,7 +1,12 @@
 import "dotenv/config";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatMistralAI } from "@langchain/mistralai";
-import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
+import { HumanMessage, SystemMessage, AIMessage} from "@langchain/core/messages";
+import { tool } from "@langchain/core/tools";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import * as z from "zod";
+import { searchInternet } from "./internet.service.js";
 
 function getGeminiModel() {
   if (!process.env.GEMINI_API_KEY) {
@@ -9,7 +14,7 @@ function getGeminiModel() {
   }
 
   return new ChatGoogleGenerativeAI({
-    model: "gemini-3.1-flash-lite",
+    model: "gemini-3.5-flash-lite",
     apiKey: process.env.GEMINI_API_KEY,
   });
 }
@@ -34,33 +39,48 @@ function createFallbackTitle(message) {
     .replace(/[.!?]+$/g, "") || "New Chat";
 }
 
-export async function generateResponse(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) {
-    throw new Error("At least one message is required to generate a response.");
-  }
-
-  const promptMessages = messages
-    .map((msg) => {
-      if (msg.role === "user") {
-        return new HumanMessage(msg.content);
-      }
-
-      if (msg.role === "ai") {
-        return new AIMessage(msg.content);
-      }
-
-      return null;
+const searchInternetTool = tool(
+  searchInternet,
+  {
+    name: "search_internet",
+    description: "Use this tool to get the latest information from the internet.",
+    schema:z.object({
+      query: z.string().describe("The search query to look up on the internet."),
     })
-    .filter(Boolean);
-
-  if (promptMessages.length === 0) {
-    throw new Error("No supported messages were provided to generate a response.");
   }
+)
 
-  const geminiModel = getGeminiModel();
-  const response = await geminiModel.invoke(promptMessages);
+const prompt = ChatPromptTemplate.fromMessages([
+  ["system", "You are a helpful assistant. Use tools only when necessary."],
+  new MessagesPlaceholder("messages"),
+  new MessagesPlaceholder("agent_scratchpad"), // Required for createToolCallingAgent
+]);
 
-  return response.content;
+const agentExecutor = createReactAgent({
+  llm: getGeminiModel(),
+  tools: [searchInternetTool],
+});
+
+export async function generateResponse(messages) {
+  const formattedMessages = messages.map(msg => {
+    if (msg.role === "user") {
+      return new HumanMessage(msg.content);
+    } else if (msg.role === "ai" || msg.role === "assistant") {
+      return new AIMessage(msg.content);
+    } else if (msg.role === "system") {
+      return new SystemMessage(msg.content);
+    }
+    
+    return new HumanMessage(msg.content || ""); 
+  });
+
+  const response = await agentExecutor.invoke({
+    messages: formattedMessages
+  });
+
+  const finalMessage = response.messages[response.messages.length - 1];
+  
+  return finalMessage.content; 
 }
 
 export async function generateChatTitle(message) {

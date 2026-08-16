@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { useSelector } from "react-redux"
 import { useChat } from '../hook/useChat'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { RiArrowUpLine, RiMenu4Line } from "@remixicon/react";
 
 const DashBoard = () => {
@@ -28,7 +31,7 @@ const DashBoard = () => {
     setChatInput('');
   }
   const openChat = (chatId) => {
-    chat.handleOpenChat(chatId);
+    chat.handleOpenChat(chatId,chats);
   }
 
   return (
@@ -36,7 +39,7 @@ const DashBoard = () => {
       <section className="mx-auto flex h-full w-full gap-4 overflow-hidden">
         <div className="flex h-full w-full gap-3 overflow-hidden">
           <aside
-            className={`h-full shrink-0 flex-col bg-[#1E1F20] flex transition-all duration-300 overflow-hidden ${isSidebarOpen ? 'w-75 p-4' : 'w-16 p-2 items-center'}`}
+            className={`h-full shrink-0 flex-col bg-[#1E1F20] flex transition-all duration-300 overflow-hidden ${isSidebarOpen ? 'w-55 p-4' : 'w-12 p-2 items-center'}`}
           >
 
             <div className={`flex w-full mb-4 items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}>
@@ -76,6 +79,7 @@ const DashBoard = () => {
                   {msg.role === "ai" ? (
                     <div className="leading-relaxed text-neutral-200">
                       <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
                         components={{
                           // Paragraphs
                           p: ({ node, ...props }) => <p className="mb-3 last:mb-0 leading-relaxed" {...props} />,
@@ -93,16 +97,21 @@ const DashBoard = () => {
                           // Code blocks & Inline code
                           code: ({ node, inline, className, children, ...props }) => {
                             const match = /language-(\w+)/.exec(className || '')
-                            return !inline ? (
+                            const isInline = inline || !match;
+                            return !isInline ? (
                               <div className="my-4 overflow-hidden rounded-lg bg-[#000000] border border-white/10">
                                 <div className="bg-white/5 px-4 py-1.5 text-xs text-neutral-400 font-mono flex justify-between">
                                   <span>{match ? match[1] : 'code'}</span>
                                 </div>
-                                <pre className="overflow-x-auto p-4 text-sm font-mono text-neutral-200">
-                                  <code className={className} {...props}>
-                                    {children}
-                                  </code>
-                                </pre>
+                                <SyntaxHighlighter
+                                  {...props}
+                                  style={vscDarkPlus}
+                                  language={match ? match[1] : 'text'}
+                                  PreTag="div"
+                                  customStyle={{ margin: 0, padding: '1rem', background: '#000000' }}
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
                               </div>
                             ) : (
                               <code className="rounded-md bg-white/10 px-1.5 py-0.5 text-sm font-mono text-pink-300" {...props}>
@@ -110,6 +119,14 @@ const DashBoard = () => {
                               </code>
                             )
                           },
+
+                          // Tables
+                          table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-lg border border-white/10"><table className="w-full text-sm text-left text-neutral-300 border-collapse" {...props} /></div>,
+                          thead: ({ node, ...props }) => <thead className="text-xs text-neutral-400 uppercase bg-white/5 border-b border-white/10" {...props} />,
+                          tbody: ({ node, ...props }) => <tbody className="divide-y divide-white/10" {...props} />,
+                          tr: ({ node, ...props }) => <tr className="hover:bg-white/5 transition-colors" {...props} />,
+                          th: ({ node, ...props }) => <th className="px-4 py-3 font-medium border-r border-white/10 last:border-r-0" {...props} />,
+                          td: ({ node, ...props }) => <td className="px-4 py-3 border-r border-white/10 last:border-r-0" {...props} />,
 
                           // Bold text
                           strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />,
