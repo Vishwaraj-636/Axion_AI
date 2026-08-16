@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatMistralAI } from "@langchain/mistralai";
-import { HumanMessage, SystemMessage, AIMessage} from "@langchain/core/messages";
+import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
@@ -44,7 +44,7 @@ const searchInternetTool = tool(
   {
     name: "search_internet",
     description: "Use this tool to get the latest information from the internet.",
-    schema:z.object({
+    schema: z.object({
       query: z.string().describe("The search query to look up on the internet."),
     })
   }
@@ -70,8 +70,8 @@ export async function generateResponse(messages) {
     } else if (msg.role === "system") {
       return new SystemMessage(msg.content);
     }
-    
-    return new HumanMessage(msg.content || ""); 
+
+    return new HumanMessage(msg.content || "");
   });
 
   const response = await agentExecutor.invoke({
@@ -79,8 +79,8 @@ export async function generateResponse(messages) {
   });
 
   const finalMessage = response.messages[response.messages.length - 1];
-  
-  return finalMessage.content; 
+
+  return finalMessage.content;
 }
 
 export async function generateChatTitle(message) {

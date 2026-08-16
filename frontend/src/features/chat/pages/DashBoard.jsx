@@ -23,10 +23,10 @@ const DashBoard = () => {
   const { handleLogout } = useAuth();
 
   const suggestions = [
-    "Explain Quantum Computing in simple terms",
-    "Write a haiku about artificial intelligence",
-    "How do I center a div using Tailwind CSS?",
-    "Give me a recipe for chocolate chip cookies"
+    "Today’s top headlines",
+    "write a cover letter for a job",
+    "write a blog post on a topic of interest",
+    "tell me the jokes"
   ];
 
   const handleSuggestionClick = (suggestion) => {
@@ -139,12 +139,11 @@ const DashBoard = () => {
           <section className="flex-1 flex flex-col h-full min-w-0 bg-[#1c1c1e]">
             {(!currentChatId || (chats[currentChatId] && chats[currentChatId].messages.length === 0)) ? (
               // Welcome Message Empty State
-              <div className="flex-1 flex flex-col items-center justify-center px-4">
-                <div className="h-20 w-20 mb-8 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20">
-                  <span className="text-4xl text-white">✨</span>
+              <div className="flex-1 flex flex-col  items-center justify-center px-4">
+                <div className="h-10 w-20 mb-8 rounded-2xl flex items-center justify-center">
+                  <span className="text-6xl text-white">✨</span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-semibold mb-3 text-white tracking-tight">How can I help you today?</h2>
-                <p className="text-neutral-400 text-lg mb-8">Send a message to start chatting with Axion AI.</p>
+                <h2 className="text-3xl md:text-4xl font-semibold mb-8 text-white tracking-tight">How can I help you today?</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
                   {suggestions.map((suggestion, idx) => (
                     <button
@@ -174,7 +173,7 @@ const DashBoard = () => {
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
-                              p: ({ node, ...props }) => <p className="mb-4 last:mb-0" {...props} />,
+                              p: ({ node, ...props }) => <p className="last:mb-0" {...props} />,
                               h1: ({ node, ...props }) => <h1 className="mb-4 mt-6 text-2xl font-semibold text-white" {...props} />,
                               h2: ({ node, ...props }) => <h2 className="mb-3 mt-5 text-xl font-semibold text-white" {...props} />,
                               h3: ({ node, ...props }) => <h3 className="mb-2 mt-4 text-lg font-semibold text-white" {...props} />,
@@ -209,8 +208,8 @@ const DashBoard = () => {
                               thead: ({ node, ...props }) => <thead className="text-xs text-neutral-400 uppercase bg-white/5 border-b border-white/10" {...props} />,
                               tbody: ({ node, ...props }) => <tbody className="divide-y divide-white/10" {...props} />,
                               tr: ({ node, ...props }) => <tr className="hover:bg-white/5 transition-colors" {...props} />,
-                              th: ({ node, ...props }) => <th className="px-4 py-3 font-medium border-r border-white/10 last:border-r-0" {...props} />,
-                              td: ({ node, ...props }) => <td className="px-4 py-3 border-r border-white/10 last:border-r-0" {...props} />,
+                              th: ({ node, ...props }) => <th className="px-4 py-3 font-medium border-r border-white/10 " {...props} />,
+                              td: ({ node, ...props }) => <td className="px-4 py-3 border-r border-white/10 " {...props} />,
                               strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />,
                               a: ({ node, ...props }) => <a className="text-blue-400 hover:text-blue-300 underline underline-offset-4" target="_blank" rel="noreferrer" {...props} />,
                               blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500/50 pl-4 italic text-neutral-400 my-4" {...props} />
@@ -241,9 +240,9 @@ const DashBoard = () => {
             )}
 
             {/* Input Footer */}
-            <footer className="shrink-0 w-full px-4 pb-6 pt-2 md:px-12 lg:px-24 xl:px-48 bg-gradient-to-t from-[#1c1c1e] via-[#1c1c1e] to-transparent">
+            <footer className="shrink-0 w-full px-4 pb-6 pt-2 md:px-12 lg:px-24 xl:px-48 bg-linear-to-t from-[#1c1c1e] via-[#1c1c1e] to-transparent">
               <form
-                className="flex items-center gap-3 bg-[#252528] border border-white/10 rounded-2xl p-1.5 shadow-sm transition-all focus-within:border-white/20 focus-within:ring-2 focus-within:ring-white/5"
+                className="flex items-center gap-3 bg-[#252528] border rounded-2xl p-1.5 shadow-sm transition-all focus-within:border-white/20 focus-within:ring-2 focus-within:ring-white/5"
                 onSubmit={handleSubmit}
               >
                 <input
@@ -252,7 +251,7 @@ const DashBoard = () => {
                   onChange={(event) => setChatInput(event.target.value)}
                   placeholder="Ask Axion..."
                   autoComplete="off"
-                  className="flex-1 bg-transparent px-4 py-2.5 text-[15px] text-white placeholder:text-neutral-500 outline-none"
+                  className="flex-1 bg-transparent px-4 py-2.5 text-[15px]  placeholder:text-neutral-500 outline-none"
                 />
                 <button
                   type="submit"
