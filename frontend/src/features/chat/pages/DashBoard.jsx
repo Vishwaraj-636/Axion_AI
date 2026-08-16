@@ -13,7 +13,19 @@ const DashBoard = () => {
   const chat = useChat();
   const dispatch = useDispatch();
   const [chatInput, setChatInput] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const chats = useSelector((state) => state.chat.chats);
   const currentChatId = useSelector((state) => state.chat.currentChatId);
@@ -59,10 +71,17 @@ const DashBoard = () => {
   return (
     <main className='h-screen w-full bg-[#1c1c1e] text-white/90 font-sans tracking-tight flex flex-col'>
       <section className="mx-auto flex h-full w-full overflow-hidden">
-        <div className="flex h-full w-full overflow-hidden">
+        <div className="flex h-full w-full overflow-hidden relative">
+          {/* Mobile Overlay */}
+          {isSidebarOpen && (
+            <div 
+              className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
           {/* Sidebar */}
           <aside
-            className={`h-full shrink-0 flex-col bg-[#252528]/80 backdrop-blur-xl border-r border-white/10 flex transition-all duration-300 overflow-hidden ${isSidebarOpen ? 'w-64 p-4' : 'w-16 p-2 items-center'}`}
+            className={`absolute md:relative z-50 h-full shrink-0 flex-col bg-[#252528]/95 backdrop-blur-xl border-r border-white/10 flex transition-all duration-300 overflow-hidden ${isSidebarOpen ? 'translate-x-0 w-[280px] md:w-64 p-4' : '-translate-x-full md:translate-x-0 md:w-16 md:p-2 md:items-center'}`}
           >
             <div className={`flex w-full mb-6 items-center ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}>
               {isSidebarOpen && <h1 className="text-xl font-semibold tracking-tight text-white">Axion</h1>}
@@ -137,14 +156,33 @@ const DashBoard = () => {
 
           {/* Main Content Area */}
           <section className="flex-1 flex flex-col h-full min-w-0 bg-[#1c1c1e]">
+            {/* Mobile Header */}
+            <div className="md:hidden flex items-center justify-between p-3 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-white/5 transition text-neutral-400 hover:text-white"
+                >
+                  <RiMenu4Line size={24} />
+                </button>
+                <h1 className="text-lg font-semibold tracking-tight text-white">Axion</h1>
+              </div>
+              <button
+                onClick={handleNewChat}
+                className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 transition text-white"
+              >
+                <RiAddLine size={20} />
+              </button>
+            </div>
+
             {(!currentChatId || (chats[currentChatId] && chats[currentChatId].messages.length === 0)) ? (
               // Welcome Message Empty State
               <div className="flex-1 flex flex-col  items-center justify-center px-4">
                 <div className="h-10 w-20 mb-8 rounded-2xl flex items-center justify-center">
                   <span className="text-6xl text-white">✨</span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-semibold mb-8 text-white tracking-tight">How can I help you today?</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                <h2 className="text-3xl md:text-4xl font-semibold mb-8 text-white tracking-tight text-center">How can I help you today?</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl px-2">
                   {suggestions.map((suggestion, idx) => (
                     <button
                       key={idx}
@@ -240,7 +278,7 @@ const DashBoard = () => {
             )}
 
             {/* Input Footer */}
-            <footer className="shrink-0 w-full px-4 pb-6 pt-2 md:px-12 lg:px-24 xl:px-48 bg-linear-to-t from-[#1c1c1e] via-[#1c1c1e] to-transparent">
+            <footer className="shrink-0 w-full px-3 pb-4 pt-2 md:px-12 lg:px-24 xl:px-48 bg-linear-to-t from-[#1c1c1e] via-[#1c1c1e] to-transparent">
               <form
                 className="flex items-center gap-3 bg-[#252528] border rounded-2xl p-1.5 shadow-sm transition-all focus-within:border-white/20 focus-within:ring-2 focus-within:ring-white/5"
                 onSubmit={handleSubmit}

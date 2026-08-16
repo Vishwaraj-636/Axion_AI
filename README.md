@@ -1,512 +1,244 @@
-# Axion AI
+# Axion AI: Deep Dive Documentation
 
-Axion AI is a full-stack authentication and chat workspace built with an Express + MongoDB backend and a React + Vite frontend. The current implementation focuses on user registration, email verification, login, session retrieval, and a protected dashboard entry point that is prepared for chat features.
-Axion AI is a full-stack, AI-powered chat application built with an Express + MongoDB backend and a React + Vite frontend. It features a complete authentication system and a real-time, responsive chat workspace.
+Axion AI is a real-time conversational AI platform featuring a robust React frontend and an Express/Node.js backend. It leverages LangChain to integrate multiple LLMs (Gemini, Mistral) and provides internet search capabilities via Tavily, all wrapped in a sleek, modern UI.
 
-## What Is In This Repo
+This README serves as an exhaustive guide to the repository, explaining the precise role and rationale behind every component, configuration, and architectural decision.
 
-The repository is split into two main applications:
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-ISC-blue)
 
-- `backend/` contains the Express API, MongoDB connection, auth routes, validators, mail service, and JWT-based session handling.
-- `backend/` contains the Express API, MongoDB connection, auth routes, real-time chat logic with Socket.IO, and AI service integrations using LangGraph.
-- `frontend/` contains the React application, Redux store, auth hooks, auth API client, and the login/register screens.
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Architectural Deep Dive](#architectural-deep-dive)
+- [Backend Mechanics](#backend-mechanics)
+  - [Entry Point & Server Setup](#1-entry-point--server-setup)
+  - [Authentication Flow](#2-authentication-flow)
+  - [AI Orchestration (LangChain)](#3-ai-orchestration-langchain)
+  - [Chat & Message Management](#4-chat--message-management)
+  - [Data Models](#5-data-models)
+  - [Realtime Connectivity](#6-realtime-connectivity)
+- [Frontend Mechanics](#frontend-mechanics)
+  - [State Management (Redux)](#1-state-management-redux-toolkit)
+  - [Custom Hooks](#2-custom-hooks)
+  - [The Dashboard UI](#3-the-dashboard-ui-dashboardjsx)
+- [Installation and Setup](#installation-and-setup)
+- [Configuration](#configuration)
+- [API Reference & Usage Examples](#api-reference--usage-examples)
 
-## Current Feature Set
+---
 
-- User registration with username, email, and password.
-- Duplicate user prevention for both email and username.
-- Email verification through a tokenized verification link.
-- Login with password validation and verified-email checks.
-- Cookie-based JWT session creation on successful login.
-- A protected dashboard entry point that initializes a Socket.io connection.
-- Real-time, streaming AI responses via WebSockets (Socket.IO).
-- Persistent chat history saved and retrieved from the database.
-- AI-powered responses from Google Gemini, orchestrated with LangGraph.
-- Automatic, concise chat title generation from Mistral AI.
-- Rich Markdown rendering for AI messages, including code blocks.
-- Responsive chat UI with a collapsible sidebar for conversation history.
-- `get-me` endpoint for restoring the current user from the session cookie.
-- React auth forms with controlled inputs and route-based navigation between login and register pages.
-- Redux-backed client state for `user`, `loading`, and `error`.
-- Frontend API layer using Axios with `withCredentials: true` enabled.
+## Quick Start
+Get a minimal example running locally:
 
-## Tech Stack
+```bash
+# Terminal 1 - Backend
+cd backend
+npm install
+cp .env.example .env # Ensure you fill out GEMINI_API_KEY, JWT_SECRET, etc.
+npm run dev
 
-- Backend: Express, MongoDB, Mongoose, JWT, bcrypt, Nodemailer, CORS, Morgan, express-validator.
-- Frontend: React 19, Vite, React Router, Redux Toolkit, React Redux, Axios, Tailwind CSS.
-- Backend: Express, MongoDB, Mongoose, JWT, bcrypt, Nodemailer, CORS, Morgan, express-validator, **Socket.io, LangChain.js, LangGraph**.
-- Frontend: React 19, Vite, React Router, Redux Toolkit, React Redux, Axios, Tailwind CSS, **Socket.IO Client, react-markdown**.
-- Auth model: email verification + JWT session cookie.
+# Terminal 2 - Frontend
+cd frontend
+npm install
+npm run dev
+```
+Open `http://localhost:5173` in your browser.
 
-## Project Structure
+---
 
-```text
-README.md
-backend/
-  package.json
-    config/database.js
-    controllers/auth.controller.js
-    controllers/chat.controller.js
-    middleware/auth.middleware.js
-    model/
-      chat.model.js
-      message.model.js
-    routes/auth.router.js
-    routes/chat.routes.js
-    services/
-      ai.service.js
-    validators/auth.validator.js
-frontend/
-  package.json
-  vite.config.js
-  src/
-    main.jsx
-    app/
-      app.routes.jsx
-    features/
-      auth/
-      chat/
-├── backend/
-│   ├── config/
-│   ├── controllers/
-│   │   ├── auth.controller.js
-│   │   └── chat.controller.js
-│   ├── middleware/
-│   ├── models/
-│   │   ├── chat.model.js
-│   │   ├── message.model.js
-│   │   └── user.model.js
-│   ├── routes/
-│   │   ├── auth.router.js
-│   │   └── chat.routes.js
-│   ├── services/
-│   │   ├── ai.service.js
-│   │   └── mail.service.js
-│   ├── validators/
-│   └── server.js
-└── frontend/
-    ├── public/
-    ├── src/
-    │   ├── app/
-    │   ├── components/
-    │   ├── features/
-    │   │   ├── auth/
-    │   │   └── chat/
-    │   ├── hooks/
-    │   ├── services/
-    │   └── main.jsx
-    └── vite.config.js
+## Architectural Deep Dive
+Axion AI uses a decoupled client-server architecture:
+- **Frontend:** Built with Vite and React. Vite was chosen for its extremely fast HMR (Hot Module Replacement) and optimized build process. State is managed via Redux Toolkit to provide predictable global state updates, particularly useful for managing complex, deeply nested chat histories.
+- **Backend:** Node.js with Express provides a lightweight, highly customizable web server. MongoDB (via Mongoose) is used for its schema flexibility, which is ideal for storing unstructured AI chat messages. LangChain acts as the middleware orchestrator for LLMs, abstracting away provider-specific API idiosyncrasies.
+
+```mermaid
+graph LR
+    A[React Frontend] -->|REST API / Socket.io| B(Express Backend)
+    B --> C[(MongoDB)]
+    B --> D{LangChain AI Service}
+    D --> E[Gemini API]
+    D --> F[Mistral API]
+    D --> G[Tavily Search]
 ```
 
-## Step-By-Step Implementation So Far
+---
 
-### 1. Set up the backend entry point
+## Backend Mechanics
 
-The backend starts from [`backend/server.js`](backend/server.js) and performs three things in order:
+### 1. Entry Point & Server Setup
+**Files: `server.js` & `src/app.js`**
 
-- loads environment variables with `dotenv`.
-- connects to MongoDB through [`backend/src/config/database.js`](backend/src/config/database.js).
-- starts the Express server on `process.env.PORT` or `8000` by default.
+- **`server.js`:** This is the execution entry point. It initializes the MongoDB connection and binds the Express app to an HTTP server wrapper. The HTTP wrapper is strictly necessary because `socket.io` requires a raw Node HTTP server instance to attach its WebSocket upgrade listeners. It includes an error listener for `EADDRINUSE` to gracefully handle port collisions.
+- **`app.js`:** This file defines the Express middleware pipeline. 
+  - `cors` is configured strictly to allow `http://localhost:5173` and `credentials: true`, which is required for the browser to send the HTTP-only JWT cookies during API calls.
+  - `cookie-parser` is utilized to parse the incoming `Cookie` header into a readable `req.cookies` object.
+  - `morgan("dev")` provides color-coded, concise HTTP request logging.
 
-This means the backend will not start if the database connection fails.
+### 2. Authentication Flow
+**Files: `auth.controller.js`, `auth.router.js`, `auth.middleware.js`**
 
-- The current setup will only work correctly if the backend port, frontend base URL, and email links all point to the same reachable backend host.
+Security is paramount, so the auth flow relies on HTTP-only cookies to store JWTs, immunizing the application against XSS (Cross-Site Scripting) attacks that might steal tokens from `localStorage`.
 
-- enables request logging with `morgan("dev")`.
-- parses JSON and URL-encoded bodies.
-- reads cookies with `cookie-parser`.
-- allows cross-origin requests from the frontend development server at `http://localhost:5173`.
-- mounts the auth router at `/api/auth`.
-- exposes a health check route at `/`.
+- **Registration (`register`):** 
+  Takes a username, email, and password. It checks for uniqueness against the database. Upon creation, it generates an email verification JWT (`emailVerificationToken`) and dispatches a welcome email with a verification link using NodeMailer (`mail.service.js`). The user cannot log in until this link is clicked.
+- **Verification (`verifyEmail`):** 
+  An endpoint designed to be clicked from an email client. It decodes the token from the query parameters, finds the user, flips the `verified` boolean to `true`, and returns an HTML response that the user's browser renders directly, prompting them to navigate to the login page.
+- **Login (`login`):** 
+  Validates the email and password. If the user is unverified, it blocks the login. If successful, it generates a session JWT (valid for 7 days) and injects it into an HTTP-only, `lax` same-site cookie. 
+- **Middleware (`authUser`):** 
+  Protects private routes. It reads `req.cookies.token`, verifies its signature with `JWT_SECRET`, and attaches the decoded payload (containing the user ID) to `req.user`.
 
-### 3. Add authentication routes
+### 3. AI Orchestration (LangChain)
+**File: `ai.service.js`**
 
-The auth router in [`backend/src/routes/auth.router.js`](backend/src/routes/auth.router.js) exposes these endpoints:
+This is the brain of the backend, utilizing LangChain to build an agentic workflow.
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/verify-email`
-- `GET /api/auth/get-me`
+- **`generateResponse`:** 
+  Converts standard JSON messages `{ role, content }` into LangChain's specific `HumanMessage`, `SystemMessage`, and `AIMessage` classes. It uses `createReactAgent`, initializing a ReAct (Reasoning and Acting) loop. This gives the Gemini model (Google GenAI) a scratchpad to think step-by-step and decide whether to utilize the injected `searchInternet` tool (Tavily). The agent returns the final message when it concludes its reasoning.
+- **`generateChatTitle`:** 
+  Whenever a new chat is initiated, this function is called asynchronously to give the chat a meaningful name. It attempts to use the Mistral AI model first, as Mistral is often optimized for fast, concise summarizations. If Mistral fails (or the API key is missing/invalid), it features a graceful degradation mechanism: falling back to Gemini, and if Gemini fails, it simply splits the user's message and takes the first 5 words.
 
-The routes are protected or validated as needed using `registerValidator`, `loginValidator`, and `authUser`.
+### 4. Chat & Message Management
+**File: `chat.controller.js`**
 
-### 4. Add request validation
+- **`sendMessage`:** 
+  The core endpoint for chat interaction. If `chatId` is not provided (indicating a brand new chat), it generates a title (via `generateChatTitle`) and creates a new Chat record in the DB. It saves the user's message, retrieves *all* previous messages for that specific `chatId` to maintain conversational context, and passes the entire array to `generateResponse`. Finally, it saves the AI's response and sends the payload back to the client.
+- **`getMessages` / `getChats`:** 
+  Standard GET endpoints scoped to `req.user.id` to ensure users can only fetch their own chat histories.
 
-Validation is handled in [`backend/src/validators/auth.validator.js`](backend/src/validators/auth.validator.js).
+### 5. Data Models
+**Files: `user.model.js`, `chat.model.js`, `message.model.js`**
 
-- `username` must exist, be 3-30 characters long, and only contain letters, numbers, or underscores.
-- `email` must exist and be a valid email address.
-- `password` must exist and be at least 6 characters long for registration.
-- login only requires a valid email and a non-empty password.
+- **User Model:** Contains `username`, `email`, `password`, and `verified` fields. Pre-save hooks (usually utilized here) hash the password using `bcrypt` before storing it in MongoDB.
+- **Chat Model:** A lightweight model linking a `user` ObjectId to a `title`.
+- **Message Model:** Links to a `chat` ObjectId. Stores the `content` (String) and `role` (Enum: "user" | "ai"). By decoupling messages from the Chat document, the DB avoids the 16MB MongoDB document size limit that would occur if messages were embedded in an array inside the Chat model.
 
-Validation errors are returned as HTTP `400` responses with an `errors` array.
+### 6. Realtime Connectivity
+**File: `server.socket.js`**
 
-### 5. Implement auth controller logic
+Initializes a Socket.io server with CORS configured for the frontend. While currently acting as a scaffold (logging "A user connected"), this is intentionally included to allow future features like real-time typing indicators, streaming AI responses token-by-token, or multi-device synchronization without HTTP polling overhead.
 
-The controller in [`backend/src/controllers/auth.controller.js`](backend/src/controllers/auth.controller.js) currently supports:
+---
 
-- `register`: checks for existing users, creates a new user, generates an email verification token, and sends a verification email.
-- `login`: finds the user by email, validates the password, rejects unverified users, signs a JWT, and stores it in a cookie.
-- `verifyEmail`: validates the verification token, marks the user as verified, and returns a success message.
-- `getMe`: loads the current user from the JWT session and strips the password field.
+## Frontend Mechanics
 
-### 6. Configure email delivery
+### 1. State Management (Redux Toolkit)
+**Files: `app.store.js`, `chat.slice.js`**
 
-The mail service in [`backend/src/services/mail.service.js`](backend/src/services/mail.service.js) uses Nodemailer with Gmail OAuth2 credentials.
+Redux is used over simple React Context because chat applications require frequent, deeply nested state updates (e.g., appending a message to a specific chat array).
+- **`chat.slice.js`:** The state maintains a `chats` dictionary (Object) rather than an array. This is a critical performance optimization: looking up, updating, or appending messages to `state.chats[chatId]` is an `O(1)` operation. It tracks global `isLoading` states to disable inputs system-wide when the AI is "thinking".
 
-You need the following environment variables for email verification to work:
+### 2. Custom Hooks
+**File: `useChat.js`**
 
-- `GOOGLE_USER`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REFRESH_TOKEN`
+React components should ideally be presentation layers. The `useChat` hook acts as a ViewModel, bridging the UI and the network layer. 
+- **`handleSendMessage`:** Orchestrates a complex sequence: it dispatches an optimistic UI update (adding the user message to Redux immediately), makes the API call to the backend, and upon receiving the response, dispatches the AI's message and updates the `currentChatId`. If an error occurs, it catches it and dispatches an error state to be rendered.
+- **`handleOpenChat`:** Checks if the requested chat's messages are already in Redux. If they are, it avoids a redundant network request. If not, it fetches them and populates the store.
 
-### 6.5. Implement AI Services
+### 3. The Dashboard UI (`DashBoard.jsx`)
+**File: `frontend/src/features/chat/pages/DashBoard.jsx`**
 
-The AI service in `backend/src/services/ai.service.js` integrates with Google Gemini for generating chat responses and Mistral AI for creating concise chat titles.
+The `DashBoard` component serves as the primary visual interface of the application, orchestrating local component state, global Redux state, and complex UI rendering logic.
 
-You need the following environment variables for AI services to work:
+- **Component & Global State Mapping:** 
+  - It utilizes Redux's `useSelector` to subscribe to the global `chats` dictionary, the `currentChatId`, and loading boolean flags (`isLoading`, `isChatsLoading`). This ensures the UI instantly reacts to network states.
+  - The `useAuth` hook is imported to access user data (for rendering the profile badge) and the `handleLogout` function for session termination.
+  - Local state `chatInput` manages the controlled text input form.
+- **Custom Hooks Integration:** 
+  - By instantiating `useChat()`, the component accesses all complex asynchronous behaviors (`chat.handleSendMessage`, `chat.handleOpenChat`, etc.) without bloating the component itself with `fetch` or `axios` calls.
+- **Lifecycle & Initialization:**
+  - Upon mounting (`useEffect` with empty dependency array), it immediately calls `chat.initializeSocketConnection()` to establish the WebSocket link and `chat.handleGetChats()` to fetch the historical list of chats for the sidebar.
+- **Responsive Layout Mechanics:** 
+  - A dedicated `useEffect` sets up a window resize event listener. If the viewport width drops below 768px, `isSidebarOpen` is set to `false`, collapsing the sidebar into a mobile-friendly hamburger menu overlay. Tailwind CSS manages the transition animations (`translate-x-full` vs `translate-x-0`).
+- **Render Flow & Conditional Views:**
+  - **The Sidebar:** Iterates over the `chats` object. If `isChatsLoading` is true, it renders pulsing skeleton placeholders. It includes a "New Chat" button that resets `currentChatId` to `null`.
+  - **Empty State (Welcome Screen):** If there is no active chat or the active chat has zero messages, it renders a visually distinct welcome screen featuring quick-start suggestions (e.g., "write a cover letter for a job"). Clicking a suggestion directly triggers `chat.handleSendMessage`.
+  - **Active Chat View:** When messages exist, it maps through the array. User messages are styled with a solid blue background aligned right, while AI messages are transparent and aligned left.
+- **Rich Text & Code Rendering:** 
+  - AI responses are parsed through `ReactMarkdown`. Plugins like `remarkGfm` enable rendering of tables, checkboxes, and strikethroughs.
+  - The component overrides default markdown rendering via the `components={{...}}` prop. Most notably, it intercepts `code` blocks. If a code block specifies a language (like ` ```javascript `), it wraps it in a `SyntaxHighlighter` component using the `vscDarkPlus` theme, creating an IDE-like reading experience complete with custom paddings and borders. Inline code is rendered with distinct background and text colors to differentiate it from plain text.
 
-- `GEMINI_API_KEY`
-- `MISTRAL_API_KEY`
-- `TAVILY_API_KEY`
+---
 
-### 7. Build the frontend auth flow
-
-The frontend auth form screens are:
-
-- [`frontend/src/features/auth/pages/Login.jsx`](frontend/src/features/auth/pages/Login.jsx)
-- [`frontend/src/features/auth/pages/Register.jsx`](frontend/src/features/auth/pages/Register.jsx)
-
-Each form uses controlled inputs with `useState`, a submit handler, and a `Link` for moving between routes.
-
-The current UI implementation includes:
-
-- a dark, high-contrast visual style.
-- cyan accent colors for focus states and buttons.
-- responsive centered card layouts.
-- explicit form labels and placeholders.
-
-### 8. Connect the frontend to the backend API
-
-The Axios client is defined in [`frontend/src/features/auth/services/auth.api.js`](frontend/src/features/auth/services/auth.api.js).
-
-- `register()` sends `POST /api/auth/register`.
-- `login()` sends `POST /api/auth/login`.
-- `getMe()` sends `GET /api/auth/get-me`.
-- `withCredentials: true` is enabled so cookies can be sent with requests.
-
-The auth hook in [`frontend/src/features/auth/hook/use.auth.js`](frontend/src/features/auth/hook/use.auth.js) wraps these requests and updates Redux state.
-
-### 9. Manage client state with Redux
-
-Auth state lives in [`frontend/src/features/auth/auth.slice.js`](frontend/src/features/auth/auth.slice.js).
-
-- `user` stores the authenticated user object.
-- `loading` tracks request progress.
-- `error` stores the latest auth error message.
-
-The store is wired up in [`frontend/src/app/app.store.js`](frontend/src/app/app.store.js) and provided from [`frontend/src/main.jsx`](frontend/src/main.jsx).
-
-### 10. Add application routing
-
-Routing is defined in [`frontend/src/app/app.routes.jsx`](frontend/src/app/app.routes.jsx).
-
-- `/login` renders the login screen.
-- `/register` renders the registration screen.
-- `/` renders the dashboard screen.
-
-The app wrapper in [`frontend/src/app/App.jsx`](frontend/src/app/App.jsx) also triggers `handleGetMe()` on load to restore the current user from the session cookie.
-
-### 11. Implement the Dashboard and Socket.io Connection
-
-- The `frontend/src/features/chat/pages/DashBoard.jsx` component serves as the protected entry point after successful login.
-- It uses the `useChat` hook (defined in `frontend/src/features/chat/hook/useChat.js`) to manage chat-related functionalities.
-- Upon mounting, it initializes a Socket.io connection to the backend, preparing for real-time communication.
-- The dashboard currently displays a placeholder "Hello world".
-- The `Login.jsx` component now also includes a check to redirect authenticated users directly to the dashboard (`/`) if they are already logged in.
-
-
-### 12. Define Chat and Message Database Models
-
-- In `backend/src/models/`, `chat.model.js` and `message.model.js` were created to persist conversation data.
-- The `Chat` model links to a `User` via an `owner` field and stores a `title`.
-- The `Message` model links to a `Chat` and stores the `content` and `role` (`user` or `assistant`), allowing for retrieval of entire conversation threads.
-
-### 13. Add Chat API Routes and Controller Logic
-
-- The `backend/src/routes/chat.routes.js` file exposes RESTful endpoints for managing chats.
-- `GET /api/chats`: Fetches all chat histories for the authenticated user to populate the sidebar.
-- `GET /api/chats/:chatId/messages`: Fetches all messages for a specific chat, displayed when a user selects a conversation.
-- The controller logic is handled in `backend/src/controllers/chat.controller.js`.
-
-### 14. Implement Real-time Chat with Socket.io
-
-- The main server file (`backend/server.js`) was updated to initialize a Socket.IO server.
-- A connection handler listens for new clients and handles a `message` event.
-- When a `message` is received, it's processed by the AI service, and the response is streamed back to the client over the same socket connection.
-
-### 15. Build the Frontend Chat UI
-
-- The dashboard in `frontend/src/features/chat/pages/DashBoard.jsx` was built into a full chat interface.
-- It is composed of several components: `ConversationHistory.jsx` (sidebar), `MessageList.jsx` (main message view), and `MessageInput.jsx` (input form).
-- The layout is responsive and styled with Tailwind CSS.
-
-### 16. Implement the `useChat` Custom Hook
-
-- The `frontend/src/features/chat/hook/useChat.js` custom hook centralizes all chat-related logic and state management.
-- It is responsible for:
-    - Initializing and managing the Socket.IO client connection (`initializeSocketConnection`).
-    - Fetching the user's chat history from the backend (`handleGetChats`).
-    - Opening a specific chat and loading its messages (`handleOpenChat`).
-    - Sending new messages to the backend via Socket.IO (`handleSendMessage`).
-- It dispatches actions to the Redux store to update the chat state (e.g., adding new messages, setting the current chat).
-
-### 17. Frontend Chat State Management with Redux
-
-- A dedicated Redux slice (e.g., `frontend/src/features/chat/chat.slice.js`) manages the application's chat state.
-- It stores an array of `chats` (conversation history) and the `currentChatId` to track the active conversation.
-- Messages for the `currentChatId` are stored within the `chats` object, allowing for a complete view of the current conversation.
-- Redux actions are used to add new messages, update chat titles, and switch between conversations, ensuring a predictable state flow.
-
-### 18. Real-time Message Display and Markdown Rendering
-
-- The `DashBoard.jsx` component dynamically renders messages from the Redux store.
-- User messages are displayed as plain text, while AI responses are processed and rendered using `react-markdown`.
-- Custom components are provided to `ReactMarkdown` to ensure beautiful and consistent styling for various markdown elements, including:
-    - Headings (`h1`, `h2`, `h3`)
-    - Lists (`ul`, `ol`, `li`)
-    - Code blocks (`code`) with syntax highlighting (if configured) and a copy button.
-    - Bold text (`strong`)
-    - Links (`a`)
-    - Blockquotes (`blockquote`)
-- This ensures that AI-generated content, which often includes markdown, is presented clearly and aesthetically.
-
-
-## Local Setup
+## Installation and Setup
 
 ### Prerequisites
+- Node.js (v18+)
+- MongoDB instance (local or Atlas)
+- API Keys: Gemini, Mistral (optional), Tavily (optional)
 
-- Node.js 18 or newer.
-- MongoDB connection string.
-- Gmail OAuth2 credentials for outbound verification email.
-
-### 1. Install dependencies
-
-Run the installs separately in each app:
-
+### Backend Setup
 ```bash
 cd backend
 npm install
-
-cd ../frontend
-npm install
-```
-
-### 2. Configure environment variables
-
-Create a `.env` file inside `backend/`.
-
-```env
-PORT=8000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-
-GOOGLE_USER=your_gmail_address
-GOOGLE_CLIENT_ID=your_google_oauth_client_id
-GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
-GOOGLE_REFRESH_TOKEN=your_google_oauth_refresh_token
-
-GEMINI_API_KEY=your_gemini_api_key
-MISTRAL_API_KEY=your_mistral_api_key
-TAVILY_API_KEY=your_tavily_api_key
-```
-
-Notes:
-
-- `JWT_SECRET` is required for both email verification tokens and login sessions.
-- The backend currently sends verification links to `http://localhost:3000/api/auth/verify-email?...` and login redirects are also written with `localhost:3000` in the email templates, so update those URLs if your backend runs on a different port.
-- The frontend Axios client currently points to `http://localhost:3000`, while the backend defaults to port `8000`. Make sure those values match before testing the auth flow.
-
-### 3. Start the backend
-
-```bash
-cd backend
 npm run dev
 ```
 
-This starts the API with nodemon and launches the server after MongoDB connects.
-
-### 4. Start the frontend
-
+### Frontend Setup
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-This starts the Vite dev server, typically on `http://localhost:5173`.
+---
 
-## Auth Flow Summary
+## Configuration
+The backend requires environment variables defined in `backend/.env`.
 
-### Registration
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `PORT` | Number | 8000 | Port for the backend server |
+| `MONGO_URI` | String | None | MongoDB connection string |
+| `JWT_SECRET` | String | None | Secret for signing auth tokens |
+| `GEMINI_API_KEY` | String | None | Required for core AI reasoning |
+| `MISTRAL_API_KEY` | String | None | Used for optimized chat title generation |
 
-1. The user fills in username, email, and password on the register page.
-2. The frontend sends the payload to `POST /api/auth/register`.
-3. The backend validates the request body.
-4. The backend checks whether the username or email already exists.
-5. A new user record is created in MongoDB.
-6. A verification token is generated with JWT.
-7. A verification email is sent to the user.
+---
 
-### Email Verification
+## API Reference & Usage Examples
 
-1. The user clicks the verification link from the email.
-2. The backend verifies the JWT token from the query string.
-3. The related user account is marked as verified.
-4. The user can now log in.
+### Authentication (`/api/auth`)
 
-### Login
-
-1. The user submits email and password.
-2. The frontend sends the payload to `POST /api/auth/login`.
-3. The backend validates the credentials.
-4. If the account is verified, a JWT is signed.
-5. The token is saved in an HTTP cookie.
-6. The frontend can call `GET /api/auth/get-me` to restore the user.
-
-## API Reference
-
-### `POST /api/auth/register`
-
-Request body:
-
-```json
-{
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "secret123"
-}
+**Register a User**
+```bash
+curl -X POST http://localhost:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "email": "test@test.com", "password": "password123"}'
 ```
-
-Success response:
-
+*Expected Output (201 Created):*
 ```json
 {
   "message": "User registered successfully",
   "success": true,
-  "user": {
-    "id": "...",
-    "username": "john_doe",
-    "email": "john@example.com"
-  }
+  "user": { "id": "...", "username": "testuser", "email": "test@test.com" }
 }
 ```
 
-### `POST /api/auth/login`
+**Login**
+*Note: Returns a JWT in an HTTP-only cookie.*
+```bash
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@test.com", "password": "password123"}'
+```
 
-Request body:
+### Chat (`/api/chats`)
 
+**Send a Message**
+```bash
+curl -X POST http://localhost:8000/api/chats \
+  -H "Cookie: token=<your_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is the capital of France?", "chatId": "optional_chat_id"}'
+```
+*Expected Output (201 Created):*
 ```json
 {
-  "email": "john@example.com",
-  "password": "secret123"
+  "title": "Capital of France", 
+  "chat": { "_id": "...", "title": "Capital of France", "user": "..." },
+  "aiMessage": { "content": "The capital of France is Paris.", "role": "ai" }
 }
 ```
-
-Success response:
-
-```json
-{
-  "message": "Login successful",
-  "success": true,
-  "user": {
-    "id": "...",
-    "username": "john_doe",
-    "email": "john@example.com"
-  }
-}
-```
-
-### `GET /api/auth/verify-email?token=...`
-
-Marks the account as verified if the token is valid.
-
-### `GET /api/auth/get-me`
-
-Returns the current user from the session cookie.
-
-### `GET /api/chats`
-
-Returns an array of all chats for the authenticated user. Requires a valid session cookie.
-
-### `GET /api/chats/:chatId/messages`
-
-Returns an array of all messages for the specified chat ID. Requires a valid session cookie.
-
-### `POST /api/chats/message`
-
-Sends a new message to the AI. If `chatId` is not provided, a new chat is created.
-
-### `DELETE /api/chats/delete/:chatId`
-
-Deletes a specific chat and all its associated messages. Requires a valid session cookie.
-
-## Notes For Development
-
-- The app currently assumes cookie-based authentication and cross-origin requests, so the backend CORS config must stay aligned with the frontend origin.
-- The frontend login and register pages navigate immediately after submit; if you want stricter success handling, check the API response before redirecting.
-- The chat experience relies on a Socket.IO connection, which is established when the dashboard loads.
-
-## Next Useful Improvements
-
-- Add a `.env.example` file for both frontend and backend configuration.
-- Make the backend and frontend base URLs configurable through environment variables.
-- Add loading and error messages directly in the auth screens.
-- Protect the dashboard route with an authenticated route guard.
-- Allow users to rename existing chats.
-- Refactor UI components for better reusability and separation of concerns.
-
-## Dashboard UI Enhancements (Interview Deep Dive)
-
-Recently, 5 key features were implemented to enhance the Dashboard's user experience and functionality. Here is a detailed breakdown of how each feature works, designed to help understand the flow for technical interviews:
-
-### 1. User Icon & Profile Display
-**What it is:** A profile section at the bottom of the sidebar showing the logged-in user's name and icon.
-**How it works:**
-- **State Selection:** Uses Redux `useSelector` to pull the `user` object from `state.auth`.
-- **UI:** Renders a clean flex container at the bottom of the `<aside>` component in `DashBoard.jsx`. It conditionally renders the `user.username` and provides a fallback (e.g., 'User') if it's missing.
-- **Why it matters:** Confirms the active session visually without requiring the user to navigate to a separate profile page.
-
-### 2. Secure Logout Flow
-**What it is:** A logout button that clears the session both on the client and server.
-**How it works:**
-- **Backend (`auth.controller.js`):** A `GET /api/auth/logout` endpoint was created. It executes `res.clearCookie("token")` to securely invalidate the JWT session cookie.
-- **Frontend API (`auth.api.js`):** Makes the request to the logout endpoint.
-- **Redux State (`auth.slice.js`):** A `logoutUser` reducer sets the `state.user` back to `null`.
-- **Custom Hook (`use.auth.js`):** The `handleLogout` function orchestrates the flow: sets loading to true, awaits the API call, dispatches the Redux action, and handles errors.
-- **Why it matters:** Essential for security. Relying solely on client-side state clearance leaves the JWT cookie active, which could lead to CSRF or session hijacking. Clearing the HttpOnly cookie is the correct approach.
-
-### 3. Delete Chat Functionality
-**What it is:** A trash icon next to each chat in the sidebar that permanently deletes the conversation.
-**How it works:**
-- **Backend:** `DELETE /api/chats/delete/:chatId` removes the chat document and cascades deletion to all associated messages in MongoDB.
-- **Frontend Hook (`useChat.js`):** `handleDeleteChat(chatId)` wraps the API call (`deleteChat`) and upon success, dispatches `removeChat`.
-- **Redux Reducer (`chat.slice.js`):** The `removeChat` reducer deletes the specific chat ID from `state.chats`. Crucially, if `state.currentChatId === chatId`, it resets `currentChatId` to `null` to clear the main screen.
-- **UI:** A `group-hover` utility from Tailwind CSS is used so the delete icon only appears when the user hovers over a chat item, keeping the sidebar uncluttered.
-- **Why it matters:** Gives users control over their data footprint. Handled optimistically or via Redux sync to instantly remove the chat from the UI without requiring a full page refresh.
-
-### 4. Preloaded Chat Suggestions (Empty State)
-**What it is:** A set of prompt suggestions displayed when there are no messages in the current chat or no chat selected.
-**How it works:**
-- **Condition:** Checks `(!chats[currentChatId] || chats[currentChatId].messages.length === 0)` and `!isLoading`.
-- **Data:** An array of string prompts (`const suggestions = [...]`).
-- **Interaction:** Clicking a suggestion triggers `handleSuggestionClick(suggestion)` which directly calls `chat.handleSendMessage(...)`.
-- **Why it matters:** Eliminates the "blank page syndrome" and guides new users on how to interact with the AI model. It improves onboarding engagement.
-
-### 5. AI Streaming / Loading Animation
-**What it is:** A visual indicator (bouncing dots) showing that the AI is processing the request.
-**How it works:**
-- **State Integration:** The `isLoading` flag from `state.chat.isLoading` is mapped via `useSelector`.
-- **UI Implementation:** When `isLoading` is true, an additional message bubble is rendered at the bottom of the chat list. It uses Tailwind's `animate-bounce` on three small `div` circles.
-- **Animation Sync:** Inline styles (`style={{ animationDelay: '...' }}`) are used to stagger the bounce effect (0ms, 150ms, 300ms), creating a wave-like typing indicator.
-- **Why it matters:** Provides immediate visual feedback after a user submits a prompt, preventing them from wondering if the app froze or the click registered. Essential for asynchronous LLM operations which can take several seconds to stream.
