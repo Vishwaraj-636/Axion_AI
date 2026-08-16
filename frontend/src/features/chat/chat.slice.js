@@ -1,4 +1,4 @@
-import { createSlice, current } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 
 
 const chatSlice = createSlice({
@@ -7,6 +7,7 @@ const chatSlice = createSlice({
     chats: {},
     currentChatId: null,
     isLoading: false,
+    isChatsLoading: false,
     error: null,
   },
   reducers: {
@@ -40,6 +41,9 @@ const chatSlice = createSlice({
     setIsLoading: (state, action) => {
       state.isLoading = action.payload
     },
+    setIsChatsLoading: (state, action) => {
+      state.isChatsLoading = action.payload
+    },
     setError: (state, action) => {
       state.error = action.payload
     },
@@ -65,6 +69,6 @@ const chatSlice = createSlice({
   }
 })
 
-export const { setChats, setCurrentChatId, setIsLoading, setError, createNewChat, addNewMessage, addMessages, removeChat } = chatSlice.actions
+export const { setChats, setCurrentChatId, setIsLoading, setIsChatsLoading, setError, createNewChat, addNewMessage, addMessages, removeChat } = chatSlice.actions
 
 export default chatSlice.reducer

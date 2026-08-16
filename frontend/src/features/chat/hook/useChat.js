@@ -1,6 +1,6 @@
 import { initializeSocketConnection } from "../services/chat.socket";
 import { sendMessage, getChats, getMessages, deleteChat } from "../services/chat.api";
-import { setChats, setCurrentChatId, setError, setIsLoading, createNewChat, addNewMessage, addMessages, removeChat } from "../chat.slice";
+import { setChats, setCurrentChatId, setError, setIsLoading, setIsChatsLoading, createNewChat, addNewMessage, addMessages, removeChat } from "../chat.slice";
 import { useDispatch } from "react-redux";
 
 
@@ -24,7 +24,6 @@ export const useChat = () => {
       }
 
       dispatch(addNewMessage({
-        // chatId: resolvedChatId,
         chatId: chatId || chat._id,
         content: message,
         role: "user",
@@ -32,7 +31,6 @@ export const useChat = () => {
 
       dispatch(addNewMessage({
         chatId: chatId || chat._id,
-        // chatId: resolvedChatId,
         content: aiMessage.content,
         role: aiMessage.role,
       }));
@@ -48,21 +46,25 @@ export const useChat = () => {
   }
 
   async function handleGetChats() {
-    dispatch(setIsLoading(true));
-    const data = await getChats();
-    const { chats } = data
+    dispatch(setIsChatsLoading(true));
+    try {
+      const data = await getChats();
+      const { chats } = data
 
-    dispatch(setChats(chats.reduce((acc, chat) => {
-      acc[chat._id] = {
-        id: chat._id,
-        title: chat.title,
-        messages: [],
-        lastUpdated: new Date().toISOString(),
-      }
-      return acc;
-    }, {})));
-    dispatch(setIsLoading(false));
+      const newChatsObj = chats.reduce((acc, chat) => {
+        acc[chat._id] = {
+          id: chat._id,
+          title: chat.title,
+          messages: [],
+          lastUpdated: new Date().toISOString(),
+        }
+        return acc;
+      }, {});
 
+      dispatch(setChats(newChatsObj));
+    } finally {
+      dispatch(setIsChatsLoading(false));
+    }
   }
 
   async function handleOpenChat(chatId, chats) {
@@ -94,18 +96,6 @@ export const useChat = () => {
       finally {
         dispatch(setIsLoading(false));
       }
-      /* const data = await getMessages(chatId)
-      const { messages } = data
-
-      const formattedMessages = messages.map(msg=>({
-        content: msg.content,
-        role: msg.role
-      }))
-
-      dispatch(addMessages({
-        chatId,
-        messages: formattedMessages
-      })) */
     }
     dispatch(setCurrentChatId(chatId));
   }
